@@ -4,14 +4,17 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const crypto = require('crypto');
 
-const DB_HOST = 'localhost';
-const DB_USER = 'root_harsh';
-const DB_PASS = 'Harshraj@22';
-const DB_NAME = 'DataJeopardyDB';
-const API_PORT = 5000;
+// Load environment variables from .env if present
+require('dotenv').config();
+
+const DB_HOST = process.env.DB_HOST || 'localhost';
+const DB_USER = process.env.DB_USER || 'root_harsh';
+const DB_PASS = process.env.DB_PASS || 'Harshraj@22';
+const DB_NAME = process.env.DB_NAME || 'DataJeopardyDB';
+const API_PORT = parseInt(process.env.API_PORT, 10) || 5000;
 
 // Auto-lock when RiskScore >= threshold
-const AUTO_LOCK_RISK_THRESHOLD = 60;
+const AUTO_LOCK_RISK_THRESHOLD = parseInt(process.env.AUTO_LOCK_RISK_THRESHOLD, 10) || 60;
 
 const pool = mysql.createPool({
   host: DB_HOST,
