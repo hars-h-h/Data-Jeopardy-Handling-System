@@ -1,0 +1,900 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>DataJeopardy Security Dashboard - Enterprise</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    /* Enterprise light theme */
+    :root{
+      --bg:#f5f7fa;
+      --card:#ffffff;
+      --muted:#69707a;
+      --accent:#0b6ef6;
+      --accent-2:#0a58a8;
+      --danger:#d14343;
+      --success:#1eaf6e;
+      --warning:#f59e0b;
+      --table-head:#e9eef6;
+      --table-row:#f8fbff;
+      --border:#e1e6ee;
+    }
+    html,body{height:100%;margin:0;padding:18px;font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:#102027}
+    .container{max-width:1400px;margin:0 auto}
+    .card{background:var(--card);border-radius:10px;padding:20px;margin-bottom:18px;box-shadow:0 6px 18px rgba(16,32,39,0.06);border:1px solid var(--border)}
+    h1{margin:0;color:var(--accent);font-size:22px}
+    h3{margin:0 0 12px 0;color:#243746;font-size:16px}
+    label{display:block;margin:8px 0 6px;color:var(--muted);font-size:13px}
+    input,select,textarea{width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:#fff;color:#102027;box-sizing:border-box;font-size:14px}
+    textarea{min-height:84px;resize:vertical}
+    .toolbar{display:flex;gap:12px;align-items:center}
+    .toolbar .left{flex:1}
+    button{padding:10px 14px;border-radius:8px;border:0;background:var(--accent);color:#fff;cursor:pointer;font-weight:600}
+    button.secondary{background:#e9eef6;color:#102027;border:1px solid var(--border)}
+    .btn-small{padding:6px 10px;border-radius:6px;border:0;background:var(--accent);color:#fff;cursor:pointer;font-weight:600;font-size:12px}
+    .btn-small.green{background:var(--success)}
+    .btn-small.orange{background:var(--warning)}
+    .btn-small.red{background:var(--danger)}
+    .muted{color:var(--muted);font-size:13px}
+    .alert{background:#fff7e6;border:1px solid #ffecb5;padding:10px;border-radius:8px;color:#6a4a00}
+    table{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}
+    thead th{background:var(--table-head);padding:12px;text-align:left;color:#243746;font-weight:700;border-bottom:1px solid var(--border);font-size:12px}
+    tbody td{background:var(--table-row);padding:12px;color:#102027;border-bottom:1px solid rgba(16,32,39,0.04)}
+    tbody tr:last-child td{border-bottom:none}
+    .status-active{color:var(--success);font-weight:700}
+    .status-locked{color:var(--danger);font-weight:700}
+    .risk-low{color:#0d8a5f;font-weight:700}
+    .risk-medium{color:#b07a00;font-weight:700}
+    .risk-high{color:#c13737;font-weight:700}
+    .flex{display:flex;gap:12px;align-items:center}
+    .flex .col{flex:1}
+    .right{justify-content:flex-end}
+    .small-muted{font-size:12px;color:#7b8a94}
+    
+    /* Badge styles for threat types and severity */
+    .badge{display:inline-block;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:600;text-transform:uppercase}
+    .badge-low{background:#d1fae5;color:#065f46}
+    .badge-medium{background:#fef3c7;color:#92400e}
+    .badge-high{background:#fee2e2;color:#991b1b}
+    .badge-threat{background:#dbeafe;color:#1e40af;margin-left:6px}
+    
+    /* Stats grid */
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:12px}
+    .stat-card{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:16px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.1)}
+    .stat-card.green{background:linear-gradient(135deg,#1eaf6e 0%,#0d8a5f 100%)}
+    .stat-card.orange{background:linear-gradient(135deg,#f59e0b 0%,#d97706 100%)}
+    .stat-card.red{background:linear-gradient(135deg,#d14343 0%,#b91c1c 100%)}
+    .stat-card.blue{background:linear-gradient(135deg,#3b82f6 0%,#2563eb 100%)}
+    .stat-value{font-size:28px;font-weight:700;margin:4px 0}
+    .stat-label{font-size:12px;opacity:0.9}
+    
+    /* Handler routine specific */
+    .routine-name{font-weight:600;color:var(--accent)}
+    .auto-lock-yes{color:var(--danger);font-weight:700}
+    .auto-lock-no{color:var(--muted)}
+    .notify-admin-yes{color:var(--warning);font-weight:700}
+    
+    /* Query preview box */
+    .query-preview{background:#f8fafc;border:1px solid var(--border);border-radius:6px;padding:10px;margin-top:8px;font-family:monospace;font-size:12px;color:#334155}
+    .threat-indicator{display:inline-block;padding:2px 6px;border-radius:3px;font-size:10px;font-weight:700;margin-left:6px}
+    .threat-indicator.admin{background:#e0e7ff;color:#3730a3}
+    .threat-indicator.injection{background:#fee2e2;color:#991b1b}
+    .threat-indicator.normal{background:#d1fae5;color:#065f46}
+    
+    /* DCL specific styles */
+    .privilege-badge{display:inline-block;padding:3px 7px;border-radius:4px;font-size:10px;font-weight:600;margin:2px;background:#e0e7ff;color:#3730a3}
+    .privilege-level-full{background:#d1fae5;color:#065f46}
+    .privilege-level-read{background:#dbeafe;color:#1e40af}
+    .privilege-level-limited{background:#fef3c7;color:#92400e}
+    .privilege-level-minimal{background:#fee2e2;color:#991b1b}
+    
+    .grant-form{background:#f8fafc;border:1px solid var(--border);border-radius:6px;padding:14px;margin-top:12px}
+    .grant-form label{margin-top:8px}
+    .grant-form .form-row{display:flex;gap:10px;align-items:flex-end}
+    .grant-form .form-row > div{flex:1}
+    
+    .collapsible{cursor:pointer;user-select:none;display:flex;align-items:center;gap:8px}
+    .collapsible:hover{color:var(--accent)}
+    .collapsible-indicator{transition:transform 0.2s}
+    .collapsible-indicator.open{transform:rotate(90deg)}
+    .collapsible-content{max-height:0;overflow:hidden;transition:max-height 0.3s ease}
+    .collapsible-content.open{max-height:2000px}
+    
+    .privilege-details{font-family:monospace;font-size:11px;background:#fff;border:1px solid var(--border);padding:8px;border-radius:4px;margin-top:6px;white-space:pre-wrap;color:#475569}
+    
+    @media (max-width:900px){
+      .toolbar{flex-direction:column;align-items:stretch}
+      .flex{flex-direction:column}
+      .stats-grid{grid-template-columns:1fr}
+      .grant-form .form-row{flex-direction:column}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+        <div>
+          <h1>DataJeopardy Security Dashboard</h1>
+          <div class="small-muted" style="margin-top:6px">Enterprise view · Simulation mode — No destructive SQL executed</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <button id="btnRefresh" class="secondary">Refresh Data</button>
+          <button id="btnLockHighRisk" title="Lock users above backend threshold">Lock High-Risk Users</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Handler Routine Statistics -->
+    <div class="card">
+      <h3>Handler Routine Statistics</h3>
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card">
+          <div class="stat-label">Total Routines</div>
+          <div class="stat-value" id="statTotalRoutines">0</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label">Low Severity</div>
+          <div class="stat-value" id="statLowSeverity">0</div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-label">Medium Severity</div>
+          <div class="stat-value" id="statMediumSeverity">0</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-label">High Severity</div>
+          <div class="stat-value" id="statHighSeverity">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- NEW: DCL User Management Section -->
+    <div class="card">
+      <h3>🔐 Database User Privilege Management (DCL)</h3>
+      <div class="muted" style="margin-bottom:12px">Manage MySQL database user privileges and access control</div>
+      
+      <!-- DCL User Statistics -->
+      <div class="stats-grid">
+        <div class="stat-card blue">
+          <div class="stat-label">Database Users</div>
+          <div class="stat-value" id="statDCLUsers">0</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label">Full Access</div>
+          <div class="stat-value" id="statFullAccess">0</div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-label">Limited Access</div>
+          <div class="stat-value" id="statLimitedAccess">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Read-Only</div>
+          <div class="stat-value" id="statReadOnly">0</div>
+        </div>
+      </div>
+
+      <!-- DCL User Mapping Table -->
+      <h3 style="margin-top:24px">Database User → Application Role Mapping</h3>
+      <table id="dclMappingTable">
+        <thead>
+          <tr>
+            <th style="width:20%">Database User</th>
+            <th style="width:15%">App Role</th>
+            <th style="width:35%">Description</th>
+            <th style="width:15%">Privilege Level</th>
+            <th style="width:15%">Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <!-- Privilege Summary Table -->
+      <h3 style="margin-top:24px">Detailed Privilege Summary</h3>
+      <table id="privilegeSummaryTable">
+        <thead>
+          <tr>
+            <th style="width:18%">Database User</th>
+            <th style="width:12%">Host</th>
+            <th style="width:25%">Granted Privileges</th>
+            <th style="width:25%">Accessible Tables</th>
+            <th style="width:20%">Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <!-- Grant/Revoke Form -->
+      <div class="grant-form">
+        <h3 style="margin-top:0">Grant or Revoke Privileges</h3>
+        <div class="form-row">
+          <div>
+            <label>Database User</label>
+            <select id="grantUser">
+              <option value="">Select user...</option>
+            </select>
+          </div>
+          <div>
+            <label>Privilege Type</label>
+            <select id="grantPrivilege">
+              <option value="SELECT">SELECT</option>
+              <option value="INSERT">INSERT</option>
+              <option value="UPDATE">UPDATE</option>
+              <option value="DELETE">DELETE</option>
+              <option value="ALL PRIVILEGES">ALL PRIVILEGES</option>
+            </select>
+          </div>
+          <div>
+            <label>Table Name (or * for all)</label>
+            <input id="grantTable" value="*" placeholder="e.g., UserAccount or *" />
+          </div>
+          <div style="flex:0.5">
+            <button id="btnGrant" class="btn-small green">Grant</button>
+          </div>
+          <div style="flex:0.5">
+            <button id="btnRevoke" class="btn-small red">Revoke</button>
+          </div>
+        </div>
+        <div class="small-muted" style="margin-top:8px">⚠️ Changes take effect immediately. Use with caution.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Add New User</h3>
+      <label>Username</label>
+      <input id="newUsername" />
+      <label>Password</label>
+      <input id="newPassword" type="password" />
+      <label>Role</label>
+      <select id="newRole"></select>
+      <div style="margin-top:12px">
+        <button id="btnAddUser">➕ Add User</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Query Execution Tester</h3>
+      <label>Execute as User</label>
+      <select id="execUser"></select>
+
+      <label>SQL Query</label>
+      <textarea id="execQuery" placeholder="e.g. DROP TABLE UserAccount;"></textarea>
+
+      <div class="query-preview" id="queryPreview" style="display:none">
+        <strong>Handler Routine:</strong> <span id="previewRoutine">-</span><br>
+        <strong>Threat Type:</strong> <span id="previewThreat">-</span><br>
+        <strong>Action:</strong> <span id="previewAction">-</span><br>
+        <strong>Severity:</strong> <span id="previewSeverity">-</span>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:18px;margin-top:12px">
+        <div style="flex:1">
+          <button id="btnExec">Execute (Simulated)</button>
+        </div>
+        <div style="min-width:200px;text-align:right">
+          <div class="muted">Detected threat: <span id="detectedThreat">-</span></div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px" class="muted">Samples:
+        <button class="btn-small" onclick="fillSample('DROP TABLE UserAccount;')">DROP</button>
+        <button class="btn-small" onclick="fillSample('DELETE FROM UserAccount WHERE 1=1;')">DELETE</button>
+        <button class="btn-small" onclick="fillSample('SELECT PasswordHash FROM UserAccount;')">SENSITIVE</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Users & Risk Scores</h3>
+      <table id="usersTable">
+        <thead>
+          <tr>
+            <th style="width:6%">User ID</th>
+            <th style="width:18%">Username</th>
+            <th style="width:10%">Status</th>
+            <th style="width:12%">Role</th>
+            <th style="width:10%">High Severity</th>
+            <th style="width:10%">Risk Score</th>
+            <th style="width:10%">Auto-Lock</th>
+            <th style="width:24%">Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <!-- Handler Routines Table -->
+    <div class="card">
+      <h3>Handler Routines Overview</h3>
+      <table id="routinesTable">
+        <thead>
+          <tr>
+            <th style="width:8%">ID</th>
+            <th style="width:18%">Routine Name</th>
+            <th style="width:16%">Threat Type</th>
+            <th style="width:18%">Response Action</th>
+            <th style="width:10%">Severity</th>
+            <th style="width:10%">Auto Lock</th>
+            <th style="width:10%">Notify Admin</th>
+            <th style="width:10%">Usage Count</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Recent Audit Logs</h3>
+      <table id="logsTable">
+        <thead>
+          <tr>
+            <th style="width:6%">Log ID</th>
+            <th style="width:6%">User ID</th>
+            <th style="width:32%">Query</th>
+            <th style="width:10%">Severity</th>
+            <th style="width:16%">Action</th>
+            <th style="width:16%">Handler Routine</th>
+            <th style="width:8%">Threat Type</th>
+            <th style="width:6%">Time</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+  </div>
+
+<script>
+/* Full original JS logic with handler routine integration + NEW DCL functions */
+
+const API_BASE = 'http://localhost:5000';
+const el = id => document.getElementById(id);
+
+async function api(path, opts) {
+  try {
+    const r = await fetch(API_BASE + path, opts);
+    const j = await r.json();
+    return j;
+  } catch (e) {
+    alert('Error loading data. Make sure Node.js server is running.');
+    return { ok: false, error: e.message };
+  }
+}
+
+// Helper function to remove _user suffix from display names
+function cleanUsername(username) {
+  return username ? username.replace(/_user$/, '') : username;
+}
+
+function fillSample(q) { 
+  el('execQuery').value = q; 
+  detectThreat(); 
+}
+
+function classifyQuery(query) {
+  const q = (query || '').toUpperCase();
+  if (!q) return 'NORMAL_QUERY';
+  
+  if (q.includes('DROP TABLE') || q.includes('DROP DATABASE')) return 'SQL_INJECTION_DROP';
+  if (q.includes('DELETE FROM')) return 'SQL_INJECTION_DELETE';
+  if (q.includes('ALTER TABLE')) return 'SQL_INJECTION_ALTER';
+  if (q.includes('TRUNCATE')) return 'SQL_INJECTION_TRUNCATE';
+  if (q.includes('GRANT') || q.includes('REVOKE')) return 'PRIVILEGE_ESCALATION';
+  if (q.includes('PASSWORD') || q.includes('CREDITCARD') || q.includes('SSN') || q.includes('CARD')) return 'SENSITIVE_DATA_ACCESS';
+  if (q.includes('INSERT') || q.includes('UPDATE')) return 'DATA_MODIFICATION';
+  
+  return 'NORMAL_QUERY';
+}
+
+function detectThreat() {
+  const q = el('execQuery').value || '';
+  const threat = classifyQuery(q);
+  el('detectedThreat').textContent = threat;
+  
+  // Show preview box
+  const preview = el('queryPreview');
+  preview.style.display = 'block';
+  
+  // This is a simplified preview - actual values come from backend
+  const threatInfo = getThreatInfo(threat);
+  el('previewRoutine').textContent = threatInfo.routine;
+  el('previewThreat').textContent = threat;
+  el('previewAction').textContent = threatInfo.action;
+  el('previewSeverity').innerHTML = `<span class="badge badge-${threatInfo.severity.toLowerCase()}">${threatInfo.severity}</span>`;
+  
+  return threat;
+}
+
+function getThreatInfo(threat) {
+  const map = {
+    'SQL_INJECTION_DROP': { routine: 'Block Query - DROP', action: 'Block and lock account', severity: 'HIGH' },
+    'SQL_INJECTION_DELETE': { routine: 'Block Query - DELETE', action: 'Block and warn', severity: 'HIGH' },
+    'SQL_INJECTION_ALTER': { routine: 'Block ALTER', action: 'Block schema change', severity: 'HIGH' },
+    'SQL_INJECTION_TRUNCATE': { routine: 'Block TRUNCATE', action: 'Block immediately', severity: 'HIGH' },
+    'PRIVILEGE_ESCALATION': { routine: 'Notify Admin', action: 'Block and alert admin', severity: 'HIGH' },
+    'SENSITIVE_DATA_ACCESS': { routine: 'Mask Sensitive Data', action: 'Mask and log', severity: 'HIGH' },
+    'DATA_MODIFICATION': { routine: 'Warn Data Modification', action: 'Warn user', severity: 'MEDIUM' },
+    'NORMAL_QUERY': { routine: 'Warn User', action: 'Log only', severity: 'LOW' },
+    'ADMIN_ACTION': { routine: 'Admin Action', action: 'Executed by admin', severity: 'LOW' }
+  };
+  return map[threat] || { routine: 'Unknown', action: 'Unknown', severity: 'LOW' };
+}
+
+el('execQuery').addEventListener('input', detectThreat);
+
+async function refreshAll() {
+  // fetch roles
+  const rolesRes = await api('/roles');
+  if (!rolesRes.ok) return;
+  populateRoles(rolesRes.roles);
+
+  const usersRes = await api('/users');
+  if (!usersRes.ok) return;
+  populateUsers(usersRes.users);
+
+  const logsRes = await api('/logs');
+  if (!logsRes.ok) return;
+  populateLogs(logsRes.logs);
+  
+  const routinesRes = await api('/handler-routines');
+  if (!routinesRes.ok) return;
+  populateRoutines(routinesRes.routines);
+  
+  const statsRes = await api('/handler-stats');
+  if (!statsRes.ok) return;
+  populateStats(statsRes.stats);
+  
+  // NEW: Load DCL data
+  await loadDCLData();
+  populateGrantUserDropdown();
+}
+
+function populateRoles(roles) {
+  const newRole = el('newRole');
+  const execUser = el('execUser');
+  newRole.innerHTML = '';
+  execUser.innerHTML = '<option value="">Select user</option>';
+
+  roles.forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r.RoleID;
+    opt.textContent = `${r.RoleID} - ${r.RoleName}`;
+    newRole.appendChild(opt);
+  });
+
+  loadExecUsers();
+}
+
+async function loadExecUsers() {
+  const usersRes = await api('/users');
+  const execUser = el('execUser');
+  execUser.innerHTML = '<option value="">Select user</option>';
+  if (usersRes && usersRes.ok) {
+    usersRes.users.forEach(u => {
+      const o = document.createElement('option');
+      o.value = u.UserID;
+      o.textContent = `${u.Username} (${u.RoleName || u.RoleID})`;
+      execUser.appendChild(o);
+    });
+  }
+}
+
+function getRiskClass(score) {
+  if (score >= 75) return 'risk-high';
+  if (score >= 40) return 'risk-medium';
+  return 'risk-low';
+}
+
+function populateUsers(users) {
+  const tbody = document.querySelector('#usersTable tbody');
+  tbody.innerHTML = '';
+  users.forEach(u => {
+    const tr = document.createElement('tr');
+
+    const statusClass = u.Status === 'LOCKED' ? 'status-locked' : 'status-active';
+    const riskClass = getRiskClass(u.RiskScore || 0);
+
+    tr.innerHTML = `
+      <td>${u.UserID}</td>
+      <td>${u.Username}</td>
+      <td class="${statusClass}">${u.Status}</td>
+      <td>${u.RoleName || u.RoleID}</td>
+      <td>${u.HighSeverityCount || 0}</td>
+      <td class="${riskClass}">${u.RiskScore || 0}</td>
+      <td>${u.ShouldAutoLock ? 'YES' : 'NO'}</td>
+      <td>
+        <button class="btn-small" onclick="manualLock(${u.UserID})">Lock</button>
+        <button class="btn-small green" onclick="manualUnlock(${u.UserID})">Unlock</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // update execUser list as well
+  const execUser = el('execUser');
+  if (execUser) {
+    execUser.innerHTML = '<option value="">Select user</option>';
+    users.forEach(u => {
+      const opt = document.createElement('option');
+      opt.value = u.UserID;
+      opt.textContent = `${u.Username} (${u.RoleName || u.RoleID})`;
+      execUser.appendChild(opt);
+    });
+  }
+}
+
+function populateLogs(logs) {
+  const tbody = document.querySelector('#logsTable tbody');
+  tbody.innerHTML = '';
+  logs.forEach(l => {
+    const tr = document.createElement('tr');
+    const severityClass = l.Severity === 'HIGH' ? 'badge-high' : l.Severity === 'MEDIUM' ? 'badge-medium' : 'badge-low';
+    const threatBadge = l.ThreatType ? `<span class="badge-threat">${l.ThreatType}</span>` : '';
+    
+    tr.innerHTML = `
+      <td>${l.LogID}</td>
+      <td>${l.UserID}</td>
+      <td style="white-space:pre-wrap;font-family:monospace;font-size:11px">${l.QueryText}</td>
+      <td><span class="badge ${severityClass}">${l.Severity}</span></td>
+      <td>${l.ActionTaken}</td>
+      <td class="routine-name">${l.RoutineName || '-'}</td>
+      <td>${threatBadge}</td>
+      <td style="font-size:11px">${new Date(l.Timestamp).toLocaleTimeString()}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function populateRoutines(routines) {
+  const tbody = document.querySelector('#routinesTable tbody');
+  tbody.innerHTML = '';
+  
+  routines.forEach(r => {
+    const tr = document.createElement('tr');
+    const severityClass = r.Severity === 'HIGH' ? 'badge-high' : r.Severity === 'MEDIUM' ? 'badge-medium' : 'badge-low';
+    const autoLockClass = r.AutoLock ? 'auto-lock-yes' : 'auto-lock-no';
+    const notifyClass = r.NotifyAdmin ? 'notify-admin-yes' : 'auto-lock-no';
+    
+    tr.innerHTML = `
+      <td>${r.RoutineID}</td>
+      <td class="routine-name">${r.RoutineName}</td>
+      <td><span class="badge-threat">${r.ThreatType}</span></td>
+      <td>${r.ResponseAction}</td>
+      <td><span class="badge ${severityClass}">${r.Severity}</span></td>
+      <td class="${autoLockClass}">${r.AutoLock ? 'YES' : 'NO'}</td>
+      <td class="${notifyClass}">${r.NotifyAdmin ? 'YES' : 'NO'}</td>
+      <td id="usage-${r.RoutineID}">-</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function populateStats(stats) {
+  let totalRoutines = 0;
+  let lowCount = 0;
+  let mediumCount = 0;
+  let highCount = 0;
+  
+  stats.forEach(s => {
+    totalRoutines++;
+    if (s.Severity === 'LOW') lowCount++;
+    else if (s.Severity === 'MEDIUM') mediumCount++;
+    else if (s.Severity === 'HIGH') highCount++;
+    
+    // Update usage count in routines table
+    const usageCell = document.getElementById(`usage-${s.RoutineID}`);
+    if (usageCell) {
+      usageCell.textContent = s.UsageCount || 0;
+    }
+  });
+  
+  el('statTotalRoutines').textContent = totalRoutines;
+  el('statLowSeverity').textContent = lowCount;
+  el('statMediumSeverity').textContent = mediumCount;
+  el('statHighSeverity').textContent = highCount;
+}
+
+// ============= NEW DCL FUNCTIONS ============= //
+
+async function loadDCLData() {
+  // Load user mapping
+  const mappingRes = await api('/dcl-user-mapping');
+  if (mappingRes.ok) {
+    populateDCLMapping(mappingRes.mapping);
+  }
+  
+  // Load privilege summary
+  const summaryRes = await api('/privilege-summary');
+  if (summaryRes.ok) {
+    populatePrivilegeSummary(summaryRes.summary);
+    updateDCLStats(summaryRes.summary);
+  }
+}
+
+function getPrivilegeLevelClass(level) {
+  const map = {
+    'FULL': 'privilege-level-full',
+    'READ_SECURITY': 'privilege-level-read',
+    'READ_ALL': 'privilege-level-read',
+    'LIMITED_WRITE': 'privilege-level-limited',
+    'MINIMAL': 'privilege-level-minimal'
+  };
+  return map[level] || 'privilege-level-read';
+}
+
+function populateDCLMapping(mapping) {
+  const tbody = document.querySelector('#dclMappingTable tbody');
+  tbody.innerHTML = '';
+  
+  mapping.forEach(m => {
+    const tr = document.createElement('tr');
+    const levelClass = getPrivilegeLevelClass(m.privilegeLevel);
+    const displayName = cleanUsername(m.dclUser); // Remove _user suffix
+    
+    tr.innerHTML = `
+      <td><strong>${displayName}</strong></td>
+      <td>${m.appRole}</td>
+      <td class="small-muted">${m.description}</td>
+      <td><span class="privilege-badge ${levelClass}">${m.privilegeLevel}</span></td>
+      <td>
+        <button class="btn-small" onclick="viewUserPrivileges('${m.dclUser}')">View Details</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function populatePrivilegeSummary(summary) {
+  const tbody = document.querySelector('#privilegeSummaryTable tbody');
+  tbody.innerHTML = '';
+  
+  summary.forEach((s, idx) => {
+    const tr = document.createElement('tr');
+    const displayName = cleanUsername(s.user); // Remove _user suffix
+    
+    if (s.error) {
+      tr.innerHTML = `
+        <td><strong>${displayName}</strong></td>
+        <td>${s.host}</td>
+        <td colspan="3" class="muted">${s.error}</td>
+      `;
+    } else {
+      const privilegeBadges = s.privileges.map(p => 
+        `<span class="privilege-badge">${p}</span>`
+      ).join(' ');
+      
+      const tableBadges = s.tables.map(t => 
+        `<span class="privilege-badge">${t}</span>`
+      ).join(' ');
+      
+      const collapsibleId = `collapse-${idx}`;
+      
+      tr.innerHTML = `
+        <td><strong>${displayName}</strong></td>
+        <td>${s.host}</td>
+        <td>${privilegeBadges || '<span class="muted">None</span>'}</td>
+        <td>${tableBadges || '<span class="muted">None</span>'}</td>
+        <td>
+          <button class="btn-small" onclick="toggleCollapsible('${collapsibleId}')">Raw Grants</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+      
+      // Add collapsible row for raw grants
+      const detailTr = document.createElement('tr');
+      detailTr.innerHTML = `
+        <td colspan="5">
+          <div id="${collapsibleId}" class="collapsible-content">
+            <div class="privilege-details">${s.rawGrants.join('\n')}</div>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(detailTr);
+    }
+  });
+}
+
+function toggleCollapsible(id) {
+  const elem = document.getElementById(id);
+  if (elem) {
+    elem.classList.toggle('open');
+  }
+}
+
+function updateDCLStats(summary) {
+  let fullAccess = 0;
+  let limitedAccess = 0;
+  let readOnly = 0;
+  
+  summary.forEach(s => {
+    if (s.error) return;
+    
+    if (s.privileges.includes('ALL PRIVILEGES')) {
+      fullAccess++;
+    } else if (s.privileges.includes('INSERT') || s.privileges.includes('UPDATE') || s.privileges.includes('DELETE')) {
+      limitedAccess++;
+    } else if (s.privileges.includes('SELECT')) {
+      readOnly++;
+    }
+  });
+  
+  el('statDCLUsers').textContent = summary.length;
+  el('statFullAccess').textContent = fullAccess;
+  el('statLimitedAccess').textContent = limitedAccess;
+  el('statReadOnly').textContent = readOnly;
+}
+
+async function viewUserPrivileges(username) {
+  const res = await api(`/user-privileges/${username}`);
+  if (!res.ok) {
+    alert('Error: ' + (res.error || 'Could not load privileges'));
+    return;
+  }
+  
+  const grants = res.privileges.map(p => p.grant).join('\n');
+  const displayName = cleanUsername(username);
+  alert(`Privileges for ${displayName}:\n\n${grants}`);
+}
+
+// NEW: Populate Grant User Dropdown with clean names
+function populateGrantUserDropdown() {
+  const grantUser = el('grantUser');
+  grantUser.innerHTML = '<option value="">Select user...</option>';
+  
+  const dclUsers = [
+    { value: 'admin_user', display: 'admin' },
+    { value: 'security_user', display: 'security' },
+    { value: 'auditor_user', display: 'auditor' },
+    { value: 'developer_user', display: 'developer' },
+    { value: 'guest_user', display: 'guest' }
+  ];
+  
+  dclUsers.forEach(user => {
+    const opt = document.createElement('option');
+    opt.value = user.value;
+    opt.textContent = user.display;
+    grantUser.appendChild(opt);
+  });
+}
+
+el('btnGrant').addEventListener('click', async () => {
+  const username = el('grantUser').value;
+  const privilege = el('grantPrivilege').value;
+  const tableName = el('grantTable').value.trim() || '*';
+  
+  if (!username) {
+    alert('Please select a database user');
+    return;
+  }
+  
+  const displayName = cleanUsername(username);
+  if (!confirm(`Grant ${privilege} on ${tableName} to ${displayName}?`)) return;
+  
+  const res = await api('/grant-privilege', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ username, privilege, tableName })
+  });
+  
+  if (!res.ok) {
+    alert('Error: ' + (res.error || 'Grant failed'));
+    return;
+  }
+  
+  alert(res.message || 'Privilege granted successfully');
+  loadDCLData();
+});
+
+el('btnRevoke').addEventListener('click', async () => {
+  const username = el('grantUser').value;
+  const privilege = el('grantPrivilege').value;
+  const tableName = el('grantTable').value.trim() || '*';
+  
+  if (!username) {
+    alert('Please select a database user');
+    return;
+  }
+  
+  const displayName = cleanUsername(username);
+  if (!confirm(`Revoke ${privilege} on ${tableName} from ${displayName}?`)) return;
+  
+  const res = await api('/revoke-privilege', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ username, privilege, tableName })
+  });
+  
+  if (!res.ok) {
+    alert('Error: ' + (res.error || 'Revoke failed'));
+    return;
+  }
+  
+  alert(res.message || 'Privilege revoked successfully');
+  loadDCLData();
+});
+
+// ============= END DCL FUNCTIONS ============= //
+
+el('btnRefresh').addEventListener('click', refreshAll);
+
+el('btnAddUser').addEventListener('click', async () => {
+  const username = el('newUsername').value.trim();
+  const password = el('newPassword').value;
+  const roleId = Number(el('newRole').value);
+  if (!username || !password || !roleId) return alert('Fill all fields');
+
+  const res = await api('/add-user', { 
+    method: 'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ username, password, roleId })
+  });
+
+  if (!res.ok) return alert('Database error: ' + (res.error || 'unknown'));
+
+  alert('User added: id ' + res.insertedId);
+  el('newUsername').value='';
+  el('newPassword').value='';
+  refreshAll();
+});
+
+el('btnExec').addEventListener('click', async () => {
+  const userId = Number(el('execUser').value);
+  const query = el('execQuery').value.trim();
+  if (!userId || !query) return alert('Select user and enter query');
+
+  const res = await api('/add-log', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ userId, query })
+  });
+
+  if (!res.ok) return alert('Database error: ' + (res.error || 'unknown'));
+
+  const routineInfo = res.handlerRoutine ? 
+    `\n\nHandler Routine: ${res.handlerRoutine.name}\nThreat Type: ${res.handlerRoutine.threatType}\nAction: ${res.handlerRoutine.action}\nSeverity: ${res.handlerRoutine.severity}` : '';
+
+  alert('Query logged (simulated).' + routineInfo);
+  el('execQuery').value='';
+  el('queryPreview').style.display='none';
+  refreshAll();
+});
+
+async function manualLock(userId) {
+  if (!confirm('Lock user ' + userId + '?')) return;
+  const res = await api('/lock-user', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ userId })
+  });
+  if (!res.ok) return alert('Database error: ' + (res.error || 'unknown'));
+  alert('Locked');
+  refreshAll();
+}
+
+async function manualUnlock(userId) {
+  if (!confirm('Unlock user ' + userId + '?')) return;
+  const res = await api('/unlock-user', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ userId })
+  });
+  if (!res.ok) return alert('Database error: ' + (res.error || 'unknown'));
+  alert('Unlocked and risk reset');
+  refreshAll();
+}
+
+el('btnLockHighRisk').addEventListener('click', async () => {
+  const res = await api('/lock-high-risk', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({})
+  });
+
+  if (!res.ok) return alert('Database error: ' + (res.error || 'unknown'));
+  alert('Lock invoked. Locked user IDs: ' + (res.locked || []).join(', '));
+  refreshAll();
+});
+
+// initial load
+refreshAll();
+</script>
+</body>
+</html>
