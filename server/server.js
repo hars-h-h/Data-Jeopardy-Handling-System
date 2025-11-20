@@ -6,7 +6,6 @@ const crypto = require('crypto');
 
 // Load environment variables from .env if present
 require('dotenv').config();
-
 const DB_HOST = process.env.DB_HOST || 'localhost';
 const DB_USER = process.env.DB_USER || 'root_harsh';
 const DB_PASS = process.env.DB_PASS || 'Harshraj@22';
