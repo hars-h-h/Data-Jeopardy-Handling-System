@@ -706,6 +706,8 @@ app.get('/dcl-user-mapping', async (req, res) => {
 });
 
 
-app.listen(API_PORT, () => {
-  console.log(`Server running: http://localhost:${API_PORT}`);
+const HOST = process.env.API_HOST || '0.0.0.0';
+
+app.listen(API_PORT, HOST, () => {
+  console.log(`Server running: http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${API_PORT}`);
 });
